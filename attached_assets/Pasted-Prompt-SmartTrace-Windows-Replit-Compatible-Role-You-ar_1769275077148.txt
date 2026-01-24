@@ -1,0 +1,93 @@
+Prompt: SmartTrace (Windows & Replit Compatible)
+Role: You are a Senior Full-Stack Mentor. Your goal is to build "SmartTrace"—a supply chain tracking app.
+
+Development Environment (CRITICAL):
+
+OS: Windows 11 (PowerShell).
+
+Database: PostgreSQL (Use pg library). The app will run locally on Windows but connect to a remote NeonDB (Postgres) URL.
+
+Port Safety: DO NOT USE PORT 5000. It is reserved by Windows system services. Use Port 5001 or 8080 for the backend.
+
+Architecture: Use a Monorepo Structure with a global root.
+
+Root: Contains .env, package.json, and concurrently to run both apps.
+
+/server: Node.js + Express (Backend).
+
+/client: React + Vite (Frontend).
+
+1. Windows-Safe Setup
+Scripts: In package.json, use cross-env for setting environment variables. Do NOT use export or && chains that break in PowerShell.
+
+Environment:
+
+Create a Global .env in the root folder.
+
+It must contain: DATABASE_URL and PORT=5001.
+
+Pathing: Use path.join() or path.resolve() for all file imports to avoid Windows backslash \ errors.
+
+2. Database Schema (PostgreSQL)
+Create a script server/db.js using the pg library (node-postgres) to create these tables if missing:
+
+batches: id (SERIAL), product_name, quantity, created_at.
+
+labels:
+
+uuid (TEXT PRIMARY KEY).
+
+serial_number (TEXT UNIQUE).
+
+type (VARCHAR - 'unit', 'carton').
+
+parent_uuid (TEXT - Self-reference for Hierarchy).
+
+hash (TEXT - SHA256).
+
+scans:
+
+id (SERIAL), label_uuid, lat, long, timestamp, status.
+
+3. Backend Logic (server/index.js)
+Middleware: Use cors and express.json.
+
+Feature A (Generation): POST /api/generate.
+
+Generate a batch of items.
+
+Logic: Every 10 Units must be linked to 1 Carton via parent_uuid.
+
+Crypto: const hash = crypto.createHash('sha256').update(serial + salt).digest('hex');
+
+Feature B (Verify): POST /api/verify.
+
+Input: { serial, lat, long }.
+
+Anti-Counterfeit Logic: Calculate speed between the last scan and current scan. If > 800km/h, return SUSPECT.
+
+4. Frontend (client/src/App.jsx)
+Vite Config: Configure server.proxy in vite.config.js to target http://localhost:5001 so we don't have CORS issues.
+
+Dashboard: Simple form to "Generate Batch".
+
+Scanner: A simulation UI.
+
+Input: Serial Number.
+
+Dropdown: "Simulate Location" (New York vs London).
+
+Feedback: Green Shield (Valid) or Red Alert (Suspect).
+
+5. Deliverables
+Provide the code for:
+
+package.json (Root) with scripts: "dev": "concurrently \"npm run server\" \"npm run client\"".
+
+server/index.js (The Express App - Port 5001).
+
+server/db.js (The PG Connection).
+
+client/vite.config.js (The Proxy setup).
+
+client/src/App.jsx (The UI).
