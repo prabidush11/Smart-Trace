@@ -1,38 +1,69 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import {
+  batches,
+  labels,
+  scans,
+  type InsertBatch,
+  type InsertLabel,
+  type InsertScan,
+  type Label,
+  type Scan,
+  type Batch,
+} from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Batches
+  createBatch(batch: InsertBatch): Promise<Batch>;
+  getBatches(): Promise<Batch[]>;
+
+  // Labels
+  createLabels(labelsData: InsertLabel[]): Promise<void>;
+  getLabelBySerial(serial: string): Promise<Label | undefined>;
+
+  // Scans
+  createScan(scan: InsertScan): Promise<Scan>;
+  getLastScan(labelUuid: string): Promise<Scan | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async createBatch(batch: InsertBatch): Promise<Batch> {
+    const [newBatch] = await db.insert(batches).values(batch).returning();
+    return newBatch;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getBatches(): Promise<Batch[]> {
+    return await db.select().from(batches).orderBy(desc(batches.createdAt));
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async createLabels(labelsData: InsertLabel[]): Promise<void> {
+    if (labelsData.length === 0) return;
+    // Insert in chunks to avoid query limits if quantity is large
+    const chunkSize = 1000;
+    for (let i = 0; i < labelsData.length; i += chunkSize) {
+      await db.insert(labels).values(labelsData.slice(i, i + chunkSize));
+    }
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async getLabelBySerial(serial: string): Promise<Label | undefined> {
+    const [label] = await db.select().from(labels).where(eq(labels.serialNumber, serial));
+    return label;
+  }
+
+  async createScan(scan: InsertScan): Promise<Scan> {
+    const [newScan] = await db.insert(scans).values(scan).returning();
+    return newScan;
+  }
+
+  async getLastScan(labelUuid: string): Promise<Scan | undefined> {
+    const [scan] = await db
+      .select()
+      .from(scans)
+      .where(eq(scans.labelUuid, labelUuid))
+      .orderBy(desc(scans.timestamp))
+      .limit(1);
+    return scan;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
