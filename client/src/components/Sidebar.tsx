@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ScanLine, Box, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, ScanLine, Box, Settings, Layers, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Sidebar() {
@@ -7,7 +7,10 @@ export function Sidebar() {
 
   const links = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/scanner", label: "Product Scanner", icon: ScanLine },
+    // ✅ Hard Separation: Consumer Verification
+    { href: "/verify", label: "Verification", icon: ShieldCheck }, 
+    // ✅ Hard Separation: Warehouse Hierarchy Check
+    { href: "/hierarchy", label: "Hierarchy Check", icon: Layers },
   ];
 
   return (

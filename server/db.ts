@@ -10,5 +10,12 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// FIXED: Added SSL config for NeonDB on Windows
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  ssl: { 
+    rejectUnauthorized: false // Allows connection to Neon without local certs
+  }
+});
+
 export const db = drizzle(pool, { schema });
